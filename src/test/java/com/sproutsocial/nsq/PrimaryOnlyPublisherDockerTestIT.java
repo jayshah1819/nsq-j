@@ -9,6 +9,7 @@ import javax.net.ssl.TrustManagerFactory;
 import java.security.KeyStore;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class PrimaryOnlyPublisherDockerTestIT extends BaseDockerTestIT {
     private Subscriber subscriber;
@@ -36,7 +37,6 @@ public class PrimaryOnlyPublisherDockerTestIT extends BaseDockerTestIT {
         super.teardown();
     }
 
-
     @Test
     public void testBasicRoundTrip() {
         sendAndVerifyMessagesFromPrimary(publisher, handler);
@@ -44,7 +44,8 @@ public class PrimaryOnlyPublisherDockerTestIT extends BaseDockerTestIT {
 
     @Test
     public void testBatcherPublish_noBackup() {
-        // This method tests both the batcher/buffered publish as well as the arraylist publish
+        // This method tests both the batcher/buffered publish as well as the arraylist
+        // publish
         List<String> messages = messages(20, 40);
         for (String message : messages) {
             publisher.publishBuffered(topic, message.getBytes());
@@ -82,8 +83,9 @@ public class PrimaryOnlyPublisherDockerTestIT extends BaseDockerTestIT {
     }
 
     /*
-    openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes
-    keytool -import -file cert.pem -alias server -keystore server.jks
+     * openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365
+     * -nodes
+     * keytool -import -file cert.pem -alias server -keystore server.jks
      */
     @Test
     public void testEncryption() throws Exception {
@@ -102,8 +104,6 @@ public class PrimaryOnlyPublisherDockerTestIT extends BaseDockerTestIT {
         sendAndVerifyMessagesFromPrimary(publisher, handler);
     }
 
-
-
     @Test
     public void testBasicRoundTrip_noBackup_primaryNsqDown_waitBeforeTryingAgain() {
         cluster.disconnectNetworkFor(cluster.getNsqdNodes().get(0));
@@ -116,12 +116,13 @@ public class PrimaryOnlyPublisherDockerTestIT extends BaseDockerTestIT {
         Assert.assertTrue("Waited at least 10 seconds", totalTimeMillis > TimeUnit.SECONDS.toMillis(10));
     }
 
-
     @Test
     public void testBasicRoundTrip_noBackup_primaryNsqDownThenRecovers() {
         cluster.disconnectNetworkFor(cluster.getNsqdNodes().get(0));
-        scheduledExecutorService.schedule(() -> cluster.reconnectNetworkFor(cluster.getNsqdNodes().get(0)), 1, TimeUnit.SECONDS);
+        scheduledExecutorService.schedule(() -> cluster.reconnectNetworkFor(cluster.getNsqdNodes().get(0)), 1,
+                TimeUnit.SECONDS);
 
         sendAndVerifyMessagesFromPrimary(publisher, handler);
     }
+
 }

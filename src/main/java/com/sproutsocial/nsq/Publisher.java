@@ -30,7 +30,8 @@ public class Publisher extends BasePubSub {
         this(client, getBalanceStrategyBiFunction(nsqd, failoverNsqd));
     }
 
-    private static BiFunction<Client, Publisher, BalanceStrategy> getBalanceStrategyBiFunction(String nsqd, String failoverNsqd) {
+    private static BiFunction<Client, Publisher, BalanceStrategy> getBalanceStrategyBiFunction(String nsqd,
+            String failoverNsqd) {
         Objects.requireNonNull(nsqd);
 
         if (failoverNsqd == null) {
@@ -44,8 +45,25 @@ public class Publisher extends BasePubSub {
         super(client);
         client.addPublisher(this);
         this.balanceStrategy = balanceStrategyFactory.apply(client, this);
-    }
 
+        // Initialize Config with default values
+        Config config = new Config();
+        config.setClientId("default-client");
+        config.setHostname("localhost");
+        config.setFeatureNegotiation(true);
+        config.setHeartbeatInterval(30000); // 30 seconds
+        config.setOutputBufferSize(16384); // 16 KB
+        config.setOutputBufferTimeout(1000); // 1 second
+        config.setTlsV1(false);
+        config.setSnappy(false);
+        config.setDeflate(false);
+        config.setDeflateLevel(0);
+        config.setSampleRate(100);
+        config.setUserAgent("nsq-j/1.6.0");
+        config.setMsgTimeout(60000); // 60 seconds
+
+        setConfig(config);
+    }
 
     public Publisher(String nsqd, String failoverNsqd) {
         this(Client.getDefaultClient(), nsqd, failoverNsqd);
@@ -55,6 +73,12 @@ public class Publisher extends BasePubSub {
         this(Client.getDefaultClient(), nsqd, null);
     }
 
+    public Publisher(Client mockClient, Object nsqd, boolean b) {
+        super(mockClient);
+        // Provide a default or mock BalanceStrategy for testing or mock purposes
+        this.balanceStrategy = new SingleNsqdBalanceStrategy(mockClient, this,
+                nsqd != null ? nsqd.toString() : "mock-nsqd");
+    }
 
     public synchronized void connectionClosed(PubConnection closedCon) {
         balanceStrategy.connectionClosed(closedCon);
@@ -75,8 +99,10 @@ public class Publisher extends BasePubSub {
     }
 
     /**
-     * This version of publish deferred will NOT retry if there is a connection issue.  If the first
-     * publish attempt fails, it will mark the connection as failed and throw an NSQException.
+     * This version of publish deferred will NOT retry if there is a connection
+     * issue. If the first
+     * publish attempt fails, it will mark the connection as failed and throw an
+     * NSQException.
      */
     public synchronized void publishDeferred(String topic, byte[] data, long delay, TimeUnit unit) {
         checkNotNull(topic);
@@ -89,13 +115,14 @@ public class Publisher extends BasePubSub {
             instance.getCon().publishDeferred(topic, data, unit.toMillis(delay));
         } catch (Exception e) {
             instance.markFailure();
-            //deferred publish does not retry
+            // deferred publish does not retry
             throw new NSQException("deferred publish failed", e);
         }
     }
 
     /**
-     * This variant of publish deferred will mirror Publisher#publish when it comes to retries: It will
+     * This variant of publish deferred will mirror Publisher#publish when it comes
+     * to retries: It will
      * continue to retry until the balance strategy runs out of connections.
      */
     public synchronized void publishDeferredWithRetry(String topic, byte[] data, long delay, TimeUnit unit) {
@@ -110,10 +137,9 @@ public class Publisher extends BasePubSub {
         } catch (Exception e) {
             logger.error("Deferred publish error", e);
             instance.markFailure();
-            publishDeferredWithRetry(topic,data,delay,unit);
+            publishDeferredWithRetry(topic, data, delay, unit);
         }
     }
-
 
     public synchronized void publish(String topic, List<byte[]> dataList) {
         checkNotNull(topic);
@@ -190,6 +216,10 @@ public class Publisher extends BasePubSub {
 
     public synchronized void setFailoverDurationSecs(int failoverDurationSecs) {
         balanceStrategy.setFailoverDurationSecs(failoverDurationSecs);
+    }
+
+    public static interface BalanceStrategyProvider {
+        BalanceStrategy get(Client client, Publisher publisher);
     }
 
 }

@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import org.junit.Assert;
 
 public class PublisherWithFailoverDockerTestIT extends BaseDockerTestIT {
     private Subscriber subscriber;
@@ -32,7 +33,6 @@ public class PublisherWithFailoverDockerTestIT extends BaseDockerTestIT {
         super.teardown();
     }
 
-
     @Test
     public void testBasicRoundTrip_WithBackup_noFailure() {
         sendAndVerifyMessagesFromPrimary(publisher, handler);
@@ -56,7 +56,7 @@ public class PublisherWithFailoverDockerTestIT extends BaseDockerTestIT {
         sendAndVerifyMessagesFromBackup(publisher, handler);
 
         cluster.reconnectNetworkFor(cluster.getNsqdNodes().get(0));
-        //Warning, this should not take so long.  But it does seem to work reliably.
+        // Warning, this should not take so long. But it does seem to work reliably.
         Util.sleepQuietly(TimeUnit.SECONDS.toMillis(15));
 
         sendAndVerifyMessagesFromPrimary(publisher, handler);
@@ -69,9 +69,9 @@ public class PublisherWithFailoverDockerTestIT extends BaseDockerTestIT {
         final int bytesPerMessage = (maxBodySize + 10) / (count - 1);
         final List<String> messages = messages(count, bytesPerMessage);
         final List<byte[]> batch = messages
-            .stream()
-            .map(String::getBytes)
-            .collect(Collectors.toList());
+                .stream()
+                .map(String::getBytes)
+                .collect(Collectors.toList());
         publisher.publish(topic, batch);
         List<NSQMessage> receivedMessages = handler.drainMessagesOrTimeOut(messages.size());
         validateReceivedAllMessages(messages, receivedMessages, true);
@@ -86,7 +86,7 @@ public class PublisherWithFailoverDockerTestIT extends BaseDockerTestIT {
 
         boolean exceptionTriggered = false;
         try {
-            publisher.publish(topic, new byte[]{0x0});
+            publisher.publish(topic, new byte[] { 0x0 });
         } catch (NSQException e) {
             exceptionTriggered = true;
         }
@@ -114,4 +114,5 @@ public class PublisherWithFailoverDockerTestIT extends BaseDockerTestIT {
 
         sendAndVerifyMessagesFromPrimary(publisher, handler);
     }
+
 }
